@@ -4,12 +4,12 @@ description: |
 inputs:
   go-version:
     description: go version
-    default: "1.21"
+    default: "1.22.3"
 runs:
   using: composite
   steps:
     - name: Setup Go
-      uses: actions/setup-go@v5
+      uses: actions/setup-go@cdcb36043654635271a94b9a6d1392de5bb323a7 # v5.0.1
       with:
         go-version: "${{ inputs.go-version }}"
     - name: Install Compilers & Formatters
@@ -18,12 +18,18 @@ runs:
         sudo apt-get install --yes bsdutils
         sudo apt-get install --yes build-essential
         sudo apt-get install --yes pkgconf
-        sudo apt-get install --yes llvm-12 clang-12
-        sudo apt-get install --yes clang-format-12
+        sudo apt-get install --yes llvm-14 clang-14
         sudo apt-get install --yes zlib1g-dev libelf-dev
-        for tool in "clang" "llc" "llvm-strip" "clang-format"
+        for tool in "clang" "llc" "llvm-strip"
         do
           sudo rm -f /usr/bin/$tool
-          sudo ln -s /usr/bin/$tool-12 /usr/bin/$tool
+          sudo ln -s /usr/bin/$tool-14 /usr/bin/$tool
         done
+        # clang-format-12 is not available in noble archive so get it from jammy
+        echo "deb http://cz.archive.ubuntu.com/ubuntu jammy main universe" | sudo -E tee /etc/apt/sources.list.d/jammy.list
+        sudo apt-get update
+        sudo apt-get install -y clang-format-12
+        sudo rm /etc/apt/sources.list.d/jammy.list
+        sudo apt-get update
+        sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-12 100
       shell: bash

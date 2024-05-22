@@ -7,9 +7,21 @@
 
 # variables
 
-[ -z "${GO_VERSION}" ] && GO_VERSION="1.21"
-[ -z "${CLANG_VERSION}" ] && CLANG_VERSION="12"
-[ -z "${ARCH}" ] && ARCH="amd64"
+[ -z "${GO_VERSION}" ] && GO_VERSION="1.22"
+[ -z "${CLANG_VERSION}" ] && CLANG_VERSION="14"
+[ -z "${ARCH}" ] && ARCH=$(uname -m)
+
+case "${ARCH}" in
+    x86_64|amd64)
+        ARCH="amd64"
+        ;;
+    aarch64|arm64)
+        ARCH="arm64"
+        ;;
+    *)
+        die "unsupported architecture ${ARCH}"
+        ;;
+esac
 
 
 # functions
@@ -44,6 +56,19 @@ install_pkgs() {
     done
 }
 
+install_clang_format_12() {
+    info "Installing clang-format-12"
+
+    echo "deb http://cz.archive.ubuntu.com/ubuntu jammy main universe" | sudo -E tee /etc/apt/sources.list.d/jammy.list
+    sudo -E apt-get update
+    sudo -E apt-get install -y clang-format-12 || die "could not install clang-format-12"
+    sudo -E rm /etc/apt/sources.list.d/jammy.list || die "could not remove jammy.list"
+    sudo -E apt-get update
+    sudo -E update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-12 100
+
+    info "clang-format-12 installed"
+}
+
 setup_go() {
     info "Setting Go ${GO_VERSION} as default"
     
@@ -59,7 +84,7 @@ setup_go() {
 setup_clang() {
     info "Setting Clang ${CLANG_VERSION} as default"
 
-    local tools="clang llc llvm-strip clang-format"
+    local tools="clang llc llvm-strip"
     for tool in ${tools}
     do
         sudo -E update-alternatives --install "/usr/bin/${tool}" "${tool}" "/usr/bin/${tool}-${CLANG_VERSION}" 100
@@ -79,10 +104,12 @@ install_pkgs \
     coreutils bsdutils findutils \
     build-essential pkgconf \
     golang-"${GO_VERSION}"-go \
-    llvm-"${CLANG_VERSION}" clang-"${CLANG_VERSION}" clang-format-"${CLANG_VERSION}" \
+    llvm-"${CLANG_VERSION}" clang-"${CLANG_VERSION}" \
     linux-headers-generic \
     linux-tools-generic linux-tools-"$(uname -r)" \
     libbpf-dev libelf-dev libzstd-dev zlib1g-dev
+
+install_clang_format_12
 
 setup_go
 setup_clang
