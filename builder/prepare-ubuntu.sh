@@ -55,17 +55,17 @@ install_pkgs() {
         info "${pkg} installed"
     done
 }
-
 install_clang_format_12() {
     info "Installing clang-format-12"
 
-    echo "deb http://cz.archive.ubuntu.com/ubuntu jammy main universe" | sudo -E tee /etc/apt/sources.list.d/jammy.list
+    echo "deb http://ports.ubuntu.com/ubuntu-ports focal main" > /etc/apt/sources.list.d/focal.list
+    sudo -E apt-get update
+    sudo -E apt-get install -y libffi7 || die "could not install libffi7"
+    
+    sudo -E apt-add-repository "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-12 main"
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add -
     sudo -E apt-get update
     sudo -E apt-get install -y clang-format-12 || die "could not install clang-format-12"
-    sudo -E rm /etc/apt/sources.list.d/jammy.list || die "could not remove jammy.list"
-    sudo -E apt-get update
-    sudo -E update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-12 100
-
     info "clang-format-12 installed"
 }
 
