@@ -6,6 +6,9 @@ package libbpfgo
 */
 import "C"
 
+// BPFFunc is an enum as defined in https://elixir.bootlin.com/linux/latest/source/include/uapi/linux/bpf.h
+type BPFFunc uint32
+
 //
 // BPFProgType
 //

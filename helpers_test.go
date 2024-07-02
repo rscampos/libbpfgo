@@ -50,7 +50,7 @@ func TestFuncSupportbyType(t *testing.T) {
 	}
 
 	for _, tc := range tt {
-		support, _ := BPFHelperIsSupported(tc.progType, tc.funcId)
+		support, _ := BPFHelperIsSupported(tc.progType, BPFFunc(tc.funcId))
 		// This may fail if the bpf helper support for a specific program changes in future.
 		if support != tc.supported {
 			t.Errorf("expected %v, got %v", tc.supported, support)

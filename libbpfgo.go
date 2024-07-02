@@ -9,8 +9,6 @@ import "C"
 import (
 	"fmt"
 	"syscall"
-
-	"github.com/aquasecurity/libbpfgo/helpers"
 )
 
 //
@@ -98,7 +96,7 @@ func BPFMapTypeIsSupported(mapType MapType) (bool, error) {
 	return supportedC == 1, nil
 }
 
-func BPFHelperIsSupported(progType BPFProgType, funcId helpers.BPFFunc) (bool, error) {
+func BPFHelperIsSupported(progType BPFProgType, funcId BPFFunc) (bool, error) {
 	supportedC := C.libbpf_probe_bpf_helper(C.enum_bpf_prog_type(int(progType)), C.enum_bpf_func_id(int(funcId)), nil)
 	if supportedC < 0 {
 		return false, syscall.Errno(-supportedC)
