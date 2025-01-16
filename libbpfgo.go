@@ -101,8 +101,21 @@ func BPFMapTypeIsSupported(mapType MapType) (bool, error) {
 func BPFHelperIsSupported(progType BPFProgType, funcId BPFFunc) (bool, error) {
 	retC, errno := C.libbpf_probe_bpf_helper(C.enum_bpf_prog_type(int(progType)), C.enum_bpf_func_id(int(funcId)), nil)
 
-	if errno != nil {
-		return false, fmt.Errorf("operation failed for function `%s` with program type `%s`: %w", funcId, progType, errno)
+	// Check explicitly if errno is EPERM because libbpf does not clean up errno in some cases,
+	// as seen in its implementation:
+	// https://github.com/libbpf/libbpf/blob/b062410166aa02c59dc0ad969c9273e591ed8b06/src/libbpf_probes.c#L33-L39
+	//
+	// For example, if the file (/proc/version_signature) does not exist, libbpf may set errno=2 (ENOENT) and never clear it.
+	// bpftool, however, only checks for errno EPERM, making this the consistent approach:
+	// https://github.com/libbpf/bpftool/blob/a5c058054cc71836930e232162e8bd1ec6705eaf/src/feature.c#L694-L701
+	//
+	// Important note regarding the above reference: "Probe may succeed even if program load fails".
+	// This indicates that the libbpf probe might return a success (true) even if the program load
+	// would fail due to permission issues. Therefore, it is necessary to check for EPERM explicitly
+	// before trusting the probe result. Only after verifying permissions can the returned value be
+	// considered reliable.
+	if errno == syscall.EPERM {
+		return false, fmt.Errorf("operation not permitted for function `%s` with program type `%s`: %w", funcId, progType, errno)
 	}
 
 	// helper not supported
