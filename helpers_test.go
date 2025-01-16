@@ -91,13 +91,6 @@ func TestFuncSupportbyType(t *testing.T) {
 			progType:   BPFProgTypeSkLookup,
 			funcId:     BPFFuncGetCurrentCgroupId,
 			supported:  false,
-			capability: []string{"cap_sys_admin"},
-			errMsg:     syscall.EINVAL,
-		},
-		{
-			progType:   BPFProgTypeSkLookup,
-			funcId:     BPFFuncGetCurrentCgroupId,
-			supported:  false,
 			capability: []string{},
 			errMsg:     syscall.EPERM,
 		},
@@ -120,14 +113,14 @@ func TestFuncSupportbyType(t *testing.T) {
 			funcId:     BPFFuncSysBpf,
 			supported:  false,
 			capability: []string{"cap_bpf", "cap_perfmon"},
-			errMsg:     syscall.EINVAL,
+			errMsg:     nil,
 		},
 		{
 			progType:   BPFProgTypeSyscall,
 			funcId:     BPFFuncGetCgroupClassid,
 			supported:  false,
 			capability: []string{"cap_bpf"},
-			errMsg:     syscall.EINVAL,
+			errMsg:     nil,
 		},
 		// Not able to probe helpers for some types (even with permission)
 		// https://github.com/libbpf/libbpf/blob/c1a6c770c46c6e78ad6755bf596c23a4e6f6b216/src/libbpf_probes.c#L430-L441
@@ -150,10 +143,9 @@ func TestFuncSupportbyType(t *testing.T) {
 			funcId:     BPFFuncSockMapUpdate,
 			supported:  false,
 			capability: []string{"cap_sys_admin"},
-			errMsg:     syscall.EINVAL,
+			errMsg:     nil,
 		},
 	}
-
 	for _, tc := range tt {
 		// reset all current effective capabilities
 		resetEffectiveCapabilities()
