@@ -3,86 +3,25 @@ package main
 import "C"
 
 import (
-	"encoding/binary"
+	"errors"
 	"fmt"
-	"os"
-	"os/exec"
+	"syscall"
 
 	bpf "github.com/aquasecurity/libbpfgo"
 )
 
-const (
-	deviceName = "lo"
-)
-
 func main() {
-	bpfModule, err := bpf.NewModuleFromFile("main.bpf.o")
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(-1)
-	}
-	defer bpfModule.Close()
 
-	err = bpfModule.BPFLoadObject()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(-1)
-	}
+	// supported, innerErr := bpf.BPFHelperIsSupported(bpf.BPFProgTypeKprobe, bpf.BPFFuncKtimeGetBootNs)
+	// supported, innerErr := bpf.BPFHelperIsSupported(bpf.BPFProgTypeLsm, bpf.BPFFuncKtimeGetBootNs)
+	supported, innerErr := bpf.BPFHelperIsSupported(bpf.BPFProgTypeLsm, bpf.BPFFuncGetCurrentCgroupId)
+	// supported, innerErr := bpf.BPFHelperIsSupported(bpf.BPFProgTypeKprobe, bpf.BPFFuncKtimeGetNs)
 
-	xdpProg, err := bpfModule.GetProgram("target")
-	if xdpProg == nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(-1)
+	fmt.Printf("supported: %v, innerErr: %v\n", supported, innerErr)
+
+	// only report if operation not permitted
+	if errors.Is(innerErr, syscall.EPERM) {
+		fmt.Printf("only report if operation not permitted - supported: %v, innerErr: %v\n", supported, innerErr)
 	}
 
-	err = xdpProg.AttachXDPLegacy(deviceName, bpf.XDPFlagsReplace)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(-1)
-	}
-	err = xdpProg.DetachXDPLegacy(deviceName, bpf.XDPFlagsReplace)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(-1)
-	}
-
-	_, err = xdpProg.AttachXDP(deviceName)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(-1)
-	}
-
-	eventsChannel := make(chan []byte)
-	rb, err := bpfModule.InitRingBuf("events", eventsChannel)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(-1)
-	}
-
-	rb.Poll(300)
-	numberOfEventsReceived := 0
-	go func() {
-		_, err := exec.Command("ping", "localhost", "-c 10").Output()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			os.Exit(-1)
-		}
-	}()
-
-recvLoop:
-
-	for {
-		b := <-eventsChannel
-		if binary.LittleEndian.Uint32(b) != 2021 {
-			fmt.Fprintf(os.Stderr, "invalid data retrieved\n")
-			os.Exit(-1)
-		}
-		numberOfEventsReceived++
-		if numberOfEventsReceived > 5 {
-			break recvLoop
-		}
-	}
-
-	rb.Stop()
-	rb.Close()
 }
